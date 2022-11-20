@@ -1,8 +1,8 @@
 /*
-Gra bêdzie w stylu Space invaders, gracz bêdzie sterowa³ obiektem lewo/prawo i strzela³ w nadci¹gaj¹cych przeciwników. 
-Bêdzie kilka poziomów trudnoœci, zwiêkszaj¹cych siê przejœciu ka¿dego z nich. Za ka¿dego trafionego przeciwnika gracz otrzyma punkty.
-Obiekt sterowany przez gracza bêdzie otrzymywa³ ujemne punkty za ka¿dego pominiêtego przeciwnika i traci³ jedno z killku serc. 
-Utracenie wszystkich skutkowaæ bêdzie zakoñczeniem gry. Uzyskane wyniki bêd¹ widoczne po wybraniu opcji z menu gry.
+Gra bedzie w stylu Space invaders, gracz bedzie sterowal obiektem lewo/prawo i strzelal w nadciagaj¹cych przeciwnikow. 
+Bedzie kilka poziomow trudnosci, zwiekszajacych sie przejsciu kazdego z nich. Za kazdego trafionego przeciwnika gracz otrzyma punkty.
+Obiekt sterowany przez gracza bêdzie otrzymywal ujemne punkty za kazdego pominietego przeciwnika i tracil jedno z kilku serc. 
+Utracenie wszystkich skutkowac bedzie zakonczeniem gry. Uzyskane wyniki beda widoczne po wybraniu opcji z menu gry.
 */
 
 int main()
