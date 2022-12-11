@@ -21,7 +21,12 @@ class gracz
 
 int main()
 {
-	sf::Window window(sf::VideoMode(1000, 1000), "Gierka");
+	sf::RenderWindow window(sf::VideoMode(1000, 650), "Gierka");
+	sf::Event event;
+
+	sf::Texture tlo;
+	tlo.loadFromFile("tlo.jfif");
+	sf::Sprite tloo(tlo);
 
 	while (window.isOpen())
 	{
@@ -33,7 +38,7 @@ int main()
 		}
 
 		window.clear();
-
+		window.draw(tloo);
 		window.display();
 	}
 
