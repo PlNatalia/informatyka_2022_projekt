@@ -13,6 +13,80 @@ Utracenie wszystkich skutkowac bedzie zakonczeniem gry. Uzyskane wyniki beda wid
 #include <stdio.h>
 #include <time.h> 
 
+#define max_liczba_opcji 3
+
+class Menu
+{
+private:
+	int wybrana_opcja;
+	sf::Font font;
+	sf::Text text[max_liczba_opcji];
+	sf::Text menu[max_liczba_opcji];
+
+public:
+	Menu(float width, float height);
+	~Menu();
+	void draw(sf::RenderWindow &window);
+	void Prawo(); //gdy gracz wcisnie strzalke w prawo w menu 
+	void Lewo(); //gdy gracz wcisnie strzalke w lewo w menu
+};
+
+Menu::Menu(float width, float height)
+{
+	if (!font.loadFromFile("arial.ttf"))
+		return;
+
+	menu[0].setFont(font);
+	menu[0].setFillColor(sf::Color::Red);
+	menu[0].setString("Graj");
+	menu[0].setPosition(sf::Vector2f((width / 3) * 0 + 100, 25));
+
+	menu[1].setFont(font);
+	menu[1].setFillColor(sf::Color::White);
+	menu[1].setString("Tablica wynikow");
+	menu[1].setPosition(sf::Vector2f((width / 3) * 1 + 100, 25));
+
+	menu[2].setFont(font);
+	menu[2].setFillColor(sf::Color::White);
+	menu[2].setString("Wyjscie");
+	menu[2].setPosition(sf::Vector2f((width / 3) * 2 + 100, 25));
+
+	wybrana_opcja = 0;
+}
+
+Menu::~Menu()
+{
+
+}
+
+void Menu::draw(sf::RenderWindow& window)
+{
+	for (int i = 0; i < max_liczba_opcji; i++)
+	{
+		window.draw(menu[i]);
+	}
+}
+
+void Menu::Prawo()
+{
+	if (wybrana_opcja - 1 >= 0)
+	{
+		menu[wybrana_opcja].setFillColor(sf::Color::White);
+		wybrana_opcja--;
+		menu[wybrana_opcja].setFillColor(sf::Color::Red);
+	}
+}
+
+void Menu::Lewo()
+{
+	if (wybrana_opcja + 1 < max_liczba_opcji)
+	{
+		menu[wybrana_opcja].setFillColor(sf::Color::White);
+		wybrana_opcja++;
+		menu[wybrana_opcja].setFillColor(sf::Color::Red);
+	}
+}
+
 class gracz
 {
 	char imie[20];
@@ -21,24 +95,43 @@ class gracz
 
 int main()
 {
-	sf::RenderWindow window(sf::VideoMode(1000, 650), "Gierka");
-	sf::Event event;
-
-	sf::Texture tlo;
-	tlo.loadFromFile("tlo.jfif");
-	sf::Sprite tloo(tlo);
+	sf::RenderWindow window(sf::VideoMode(1000, 650), "Space Invaders v2");
+	
+	Menu menu(window.getSize().x, window.getSize().y);
+	//sf::Texture tlo;
+	//tlo.loadFromFile("tlo.jfif");
+	//sf::Sprite tloo(tlo);
 
 	while (window.isOpen())
 	{
+		sf::Event event;
 
 		while (window.pollEvent(event))
 		{
-			if (event.type == sf::Event::Closed)
-				window.close();
-		}
+			switch (event.type)
+			{
+			case sf::Event::KeyReleased:
+				switch (event.key.code)
+				{
+				case sf::Keyboard::Left:
+					menu.Prawo();
+					break;
+				
+				case sf::Keyboard::Right:
+					menu.Lewo();
+					break;
+				}
 
+				break;
+			case sf::Event::Closed:
+				window.close();
+				break;
+			}
+		}
+		
 		window.clear();
-		window.draw(tloo);
+		menu.draw(window);
+	//	window.draw(tloo);
 		window.display();
 	}
 
