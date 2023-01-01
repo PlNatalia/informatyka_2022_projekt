@@ -13,30 +13,172 @@ Utracenie wszystkich skutkowac bedzie zakonczeniem gry. Uzyskane wyniki beda wid
 #include <stdio.h>
 #include <time.h>
 #include <iostream>
+#include <vector>
+#include <cmath>
 
+class Przeciwnik
+{
+private:
+	sf::Sprite kosmita;
 
-#define max_liczba_opcji 6
+public:
+	Przeciwnik(float polozenie_x, float polozenie_y, const sf::Texture& tekstura);
+	void idz();
+	void draw(sf::RenderWindow& window);
+	sf::Sprite getSprite();
+};
+
+Przeciwnik::Przeciwnik(float polozenie_x, float polozenie_y, const sf::Texture& tekstura)
+{
+	kosmita.setTexture(tekstura);
+	kosmita.setPosition(sf::Vector2f(polozenie_x, polozenie_y));
+
+}
+
+sf::Sprite Przeciwnik::getSprite() // funkcja zwracajaca wskaznik na sprite
+{
+	return kosmita;
+}
+
+void Przeciwnik::idz()
+{
+	kosmita.move(sf::Vector2f(0.0f, 0.01f));
+}
+
+void Przeciwnik::draw(sf::RenderWindow& window)
+{
+	window.draw(kosmita);
+	kosmita.move(sf::Vector2f(0.0f, 0.01f));
+
+}
+
+class Pocisk
+{
+private:
+	static const int promien_pocisku = 2; // static powoduje ze dla kazdego obiektu ta zmienna ma te sama wartosc, a tylko dla const bylaby stala, ale kazdy obiekt moglby miec te wartosc inna
+	sf::CircleShape pocisk;
+
+public:
+	Pocisk(float width, float height);
+	void draw(sf::RenderWindow& window);
+	void przesun();
+	bool czy_kolizja(Przeciwnik& alien);
+};
+
+Pocisk::Pocisk(float wsp_x, float wsp_y) : pocisk(promien_pocisku) // jedyne miejsce na inicjalizacje pola klasy z konstruktorem
+{
+	pocisk.setPosition(sf::Vector2f(wsp_x, wsp_y));
+}
+
+void Pocisk::przesun()
+{
+	pocisk.move(sf::Vector2f(0.0f, -0.2f));
+}
+
+bool Pocisk::czy_kolizja(Przeciwnik& alien)
+{
+	float x_alien = alien.getSprite().getPosition().x;
+	float y_alien = alien.getSprite().getPosition().y; //alien.getSprite to wskaznik na sprite w alienie -- dereferencja
+	float alien_dlugosc = alien.getSprite().getTexture()->getSize().x; //getTexture to wskaznik
+	float alien_szerokosc = alien.getSprite().getTexture()->getSize().y;
+	float promien_aliena = std::sqrt(alien_dlugosc * alien_dlugosc + alien_szerokosc * alien_szerokosc) / 2;
+	float x_pocisku = pocisk.getPosition().x;
+	float y_pocisku = pocisk.getPosition().y;
+	float odleglosc_miedzy_srodkami_okregow = std::sqrt(std::pow(x_alien - x_pocisku, 2) + std::pow(y_alien - y_pocisku, 2));
+
+	if (odleglosc_miedzy_srodkami_okregow <= promien_aliena + promien_pocisku)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+void Pocisk::draw(sf::RenderWindow& window)
+{
+	window.draw(pocisk);
+	przesun();
+}
+
+class Gracz
+{
+private:
+	const int wsp_x = 450; // wsp. poczatkowe
+	const int wsp_y = 500; // wsp. poczatkowe
+	sf::Sprite gracz;
+
+public:
+	Gracz(float width, float height, const sf::Texture& tekstura);
+	void animujlewo();
+	void animujprawo();
+	void draw(sf::RenderWindow& window);
+	sf::Sprite get_gracz();
+};
+
+sf::Sprite Gracz::get_gracz()
+{
+	return gracz;
+}
+
+Gracz::Gracz(float width, float height, const sf::Texture& tekstura)
+{
+	gracz.setTexture(tekstura);
+	gracz.setPosition(sf::Vector2f(wsp_x, wsp_y)); // poczatkowa pozycja
+}
+
+void Gracz::animujlewo()
+{
+	if (gracz.getPosition().x > 50)
+	{
+		gracz.move(sf::Vector2f(-0.2f, 0.0f));
+	}
+}
+
+void Gracz::animujprawo()
+{
+	if (gracz.getPosition().x < 900)
+	{
+		gracz.move(sf::Vector2f(0.2f, 0.0f));
+	}
+}
+
+void Gracz::draw(sf::RenderWindow& window)
+{
+	sf::RectangleShape tlo(sf::Vector2f(1000, 600));
+	tlo.setPosition(0, 0);
+	tlo.setFillColor(sf::Color(38, 33, 55));
+	window.draw(tlo);
+	window.draw(gracz);
+}
 
 class Menu
 {
 private:
-	int wybrana_opcja = 0;
 	sf::Font font;
-	sf::Text menu[max_liczba_opcji];
-
-public:
+	sf::Text menu[6];
+	int wybrana_opcja = 0;
 	bool esc_flaga = false;
 	bool f1_flaga = false;
 	int opcje_enter_flaga = 0;
+	bool czy_strzelac = false;
+
+public:
 	Menu(float width, float height);
-	~Menu();
-	void draw(sf::RenderWindow& window);
+	void draw(sf::RenderWindow& window); // powiadamia obiekt Gracz o koniecznosci jego rysowania
 	void Gora(); // gdy gracz wcisnie strzalke w gore w menu 
 	void Dol(); // gdy gracz wcisnie strzalke w dol w menu
 	void Esc();
 	void Pomoc(); // gry gracz wcisnie F1
 	void wybor_opcji();
+	int strzelanie();
 };
+
+int Menu::strzelanie()
+{
+	return czy_strzelac;
+}
 
 Menu::Menu(float width, float height)
 {
@@ -80,55 +222,50 @@ Menu::Menu(float width, float height)
 	menu[5].setPosition(sf::Vector2f(250, 25));
 }
 
-Menu::~Menu()
-{
-
-}
-
 void Menu::draw(sf::RenderWindow& window)
 {
-	if (esc_flaga && !f1_flaga) 
+	if (esc_flaga && !f1_flaga)
 	{
 		sf::RectangleShape ramka(sf::Vector2f(600, 400)); // wymiary
 		ramka.setPosition(200, 100);
-		ramka.setFillColor(sf::Color(30, 144, 255)); 
+		ramka.setFillColor(sf::Color(30, 144, 255));
 		window.draw(ramka);
 
 		sf::RectangleShape wnetrze(sf::Vector2f(500, 300));
 		wnetrze.setPosition(250, 150);
-		wnetrze.setFillColor(sf::Color(240, 248, 255)); 
+		wnetrze.setFillColor(sf::Color(240, 248, 255));
 		window.draw(wnetrze);
 
 		for (int i = 0; i < 3; i++) // 3 to liczba opcji po kliknieciu Esc
 		{
 			window.draw(menu[i]);
 		}
-	}
 
-	if (opcje_enter_flaga)
-	{
-		if (wybrana_opcja == 0)
+		if (opcje_enter_flaga)
 		{
-			if (opcje_enter_flaga == 1)
+			czy_strzelac = false;
+			if (wybrana_opcja == 0)
 			{
-				//
+				if (opcje_enter_flaga == 1) // graj
+				{
+					czy_strzelac = true;
+				}
 			}
-		}
-		else if (wybrana_opcja == 1)
-		{
-			if (opcje_enter_flaga == 1)
+			else if (wybrana_opcja == 1) // tablica wynikow
 			{
-				//
+				if (opcje_enter_flaga == 1)
+				{
+					//
+				}
 			}
-		}
-		else if (wybrana_opcja == 2)
-		{
-			window.draw(menu[5]);
-			if (opcje_enter_flaga == 2)
+			else if (wybrana_opcja == 2) // wyjscie
 			{
-				window.close();
+				window.draw(menu[5]);
+				if (opcje_enter_flaga == 2)
+				{
+					window.close();
+				}
 			}
-
 		}
 	}
 
@@ -136,12 +273,12 @@ void Menu::draw(sf::RenderWindow& window)
 	{
 		sf::RectangleShape ramka2(sf::Vector2f(1000, 600)); // wymiary
 		ramka2.setPosition(0, 0);
-		ramka2.setFillColor(sf::Color(30, 144, 255)); 
+		ramka2.setFillColor(sf::Color(30, 144, 255));
 		window.draw(ramka2);
 
 		sf::RectangleShape wnetrze2(sf::Vector2f(900, 500));
 		wnetrze2.setPosition(0, 50);
-		wnetrze2.setFillColor(sf::Color(240, 248, 255)); 
+		wnetrze2.setFillColor(sf::Color(240, 248, 255));
 		window.draw(wnetrze2);
 
 		window.draw(menu[3]);
@@ -190,23 +327,53 @@ void Menu::wybor_opcji()
 	opcje_enter_flaga++; //zliczanie liczby klikniec enter
 }
 
-class gracz
+bool obsluz_kolizje(std::vector <Przeciwnik>& kosmici, std::vector <Pocisk>& pociski,int *kosmita_do_usuniecia, int *pocisk_do_usuniecia) // funkcja zwraca wartosc, czy kolizja zostala wykryta
 {
-	char imie[20];
-	int punkty;
-	int wsp_x;
-	int wsp_y;
-	int predkosc; 
-};
+	for (int pocisk_i = 0; pocisk_i < pociski.size(); pocisk_i++)
+	{
+		for (int kosmita_i = 0; kosmita_i < kosmici.size(); kosmita_i++)
+		{
+			if (pociski[pocisk_i].czy_kolizja(kosmici[kosmita_i]))
+			{
+				*kosmita_do_usuniecia = kosmita_i;
+				*pocisk_do_usuniecia = pocisk_i;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 
 int main()
 {
 	sf::RenderWindow window(sf::VideoMode(1000, 600), "Space Invaders v2");
 
+	sf::Texture tekstura_kosmity1;
+	if (!tekstura_kosmity1.loadFromFile("alien1.jpg")) {
+		return -1;
+	}
+
+	sf::Texture tekstura_statku;
+	if (!tekstura_statku.loadFromFile("statek.jpg")) {
+		return -1;
+	}
+
+
 	Menu menu(window.getSize().x, window.getSize().y);
-	//sf::Texture tlo;
-	//tlo.loadFromFile("tlo.jfif");
-	//sf::Sprite tloo(tlo);
+	Gracz gracz(window.getSize().x, window.getSize().y, tekstura_statku);
+	std::vector < Pocisk > pociski;
+	std::vector < Przeciwnik > kosmici; // klasa/'tablica' vector 'przygotowuje' klase przeciwnik do przechowywania obiektow
+
+	const int liczba_przeciwnikow = 5;
+
+	for (int i = 0; i < liczba_przeciwnikow; i++)
+	{
+		float wsp_x = (window.getSize().x / 5) * i + 40;
+		float wsp_y = 50;
+
+		kosmici.push_back(Przeciwnik(wsp_x, wsp_y, tekstura_kosmity1));
+	}
 
 	while (window.isOpen())
 	{
@@ -234,26 +401,58 @@ int main()
 				case sf::Keyboard::F1:
 					menu.Pomoc();
 					break;
-				case sf::Keyboard::A:
-					//
-					break;
-				case sf::Keyboard::D:
-					//
-					break;
-				case sf::Keyboard::Space:
-					//
+				case sf::Keyboard::Space: //strzal
+					pociski.push_back(Pocisk(gracz.get_gracz().getPosition().x + 25, 500));
 					break;
 				}
-				
 				break;
 			case sf::Event::Closed:
 				window.close();
 				break;
 			}
 		}
+
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
+		{
+			gracz.animujlewo();
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D))
+		{
+			gracz.animujprawo();
+		}
+
 		window.clear();
+
+		if (menu.strzelanie())
+		{
+			gracz.draw(window);
+			for (Pocisk& pocisk : pociski)
+			{
+				pocisk.draw(window); // petla dla wszystkich stworzonych pociskow, pokazuje wszystkie obiekty
+			}
+			for (Przeciwnik& przeciwnik : kosmici)
+			{
+				przeciwnik.draw(window);
+			}
+
+			// wykrywanie i obsluga kolizji
+			int kosmita_do_usuniecia;
+			int pocisk_do_usuniecia;
+			while (obsluz_kolizje(kosmici, pociski, &kosmita_do_usuniecia, &pocisk_do_usuniecia)) //funkcja ze wskaznikami
+			{
+				//kolizja wykryta
+				kosmici.erase(kosmici.begin() + kosmita_do_usuniecia); // erase to funkcja usuwajaca elementy z wektora, begin to funkcja zwracajaca iterator (wskaznik) na poczatek wektora, dodajemy np. kosmite do usuniecia, aby przesunac iterator(wskaznik) na odpowiednie miejsce
+				pociski.erase(pociski.begin() + pocisk_do_usuniecia);
+
+				std::cout << "Liczba kosmitow" << " :" << kosmici.size() << std::endl;
+				std::cout << "Liczba pociskow" << " :" << pociski.size() << std::endl;
+			}
+			
+		}
+
+
+
 		menu.draw(window);
-		//	window.draw(tloo);
 		window.display();
 	}
 
