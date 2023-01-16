@@ -16,17 +16,34 @@ Utracenie wszystkich skutkowac bedzie zakonczeniem gry. Uzyskane wyniki beda wid
 #include <vector>
 #include <cmath>
 #include <sstream>
+#include <random>
 
 class Przeciwnik
 {
 private:
 	sf::Sprite kosmita;
+	bool poziom = true;
+	float dx = 0.2;
 
 public:
 	Przeciwnik(float polozenie_x, float polozenie_y, const sf::Texture& tekstura);
 	void draw(sf::RenderWindow& window);
 	sf::Sprite getSprite();
+	void poziom_trudnosci(bool wartosc);
+	void generuj();
 };
+
+void Przeciwnik::generuj()
+{
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> dist(-5, 5);
+}
+
+void Przeciwnik::poziom_trudnosci(bool wartosc)
+{
+	poziom = wartosc;
+}
 
 Przeciwnik::Przeciwnik(float polozenie_x, float polozenie_y, const sf::Texture& tekstura)
 {
@@ -41,8 +58,31 @@ sf::Sprite Przeciwnik::getSprite() // funkcja zwracajaca wskaznik na sprite
 
 void Przeciwnik::draw(sf::RenderWindow& window)
 {
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<> dist(-1, 1);
 	window.draw(kosmita);
-	kosmita.move(sf::Vector2f(0.0f, 0.01f));
+	if (!poziom) // trudny
+	{
+		kosmita.move(sf::Vector2f(dx, 0.0f));
+		if (kosmita.getPosition().x <= 0 || kosmita.getPosition().x + 50 >= 1000)
+		{
+			dx = -dx;
+			kosmita.move(sf::Vector2f(0.0f, 50.0f));
+		}
+	}
+	else // latwy
+	{
+		kosmita.move(sf::Vector2f(dist(gen), 0.015f));
+		if (kosmita.getPosition().x <= 0)
+		{
+			kosmita.move(sf::Vector2f(50.0f, 0.0f));
+		}
+		if (kosmita.getPosition().x + 50 >= 1000)
+		{
+			kosmita.move(sf::Vector2f(-50.0f, 0.0f));
+		}
+	}
 }
 
 class Pocisk
@@ -78,7 +118,7 @@ bool Pocisk::czy_kolizja(Przeciwnik& alien)
 	float promien_aliena = std::sqrt(alien_dlugosc * alien_dlugosc + alien_szerokosc * alien_szerokosc) / 2;
 	float x_pocisku = pocisk.getPosition().x;
 	float y_pocisku = pocisk.getPosition().y;
-	float odleglosc_miedzy_srodkami_okregow = std::sqrt(std::pow(x_alien - x_pocisku + 25, 2) + std::pow(y_alien - y_pocisku, 2)); 
+	float odleglosc_miedzy_srodkami_okregow = std::sqrt(std::pow(x_alien - x_pocisku + 25, 2) + std::pow(y_alien - y_pocisku, 2));
 
 	if (odleglosc_miedzy_srodkami_okregow <= promien_aliena + promien_pocisku)
 	{
@@ -90,9 +130,9 @@ bool Pocisk::czy_kolizja(Przeciwnik& alien)
 	}
 }
 
-bool Pocisk::kolizja_koniec_mapy(Przeciwnik& alien)
+bool kolizja_koniec_mapy(Przeciwnik& alien)
 {
-	if (alien.getSprite().getPosition().y > 600)
+	if (alien.getSprite().getPosition().y >= 600)
 	{
 		return true;
 	}
@@ -163,7 +203,7 @@ class Menu
 {
 private:
 	sf::Font font;
-	sf::Text menu[11];
+	sf::Text menu[14];
 	int wybrana_opcja = 0;
 	bool esc_flaga = false;
 	bool f1_flaga = false;
@@ -176,6 +216,9 @@ private:
 	sf::Text imie;
 	bool start = true;
 	int licznik = 0;
+	bool wybor_poziomu = true;
+	bool poczatek_gry = false;
+	bool nowa_gra = false;
 
 public:
 	Menu(float width, float height, const sf::Texture& tekstura);
@@ -191,7 +234,49 @@ public:
 	void koniec(bool wartosc);
 	void nick(sf::Text nick);
 	void start_programu();
+	int F1();
+	void poziom(bool wartosc2);
+	int Escc();
+	int k_punkty();
+	sf::Text k_imie();
+	bool nowa_gierka();
+	void nie_rysuj(bool wartosc3);
 };
+
+void Menu::nie_rysuj(bool wartosc3)
+{
+	nowa_gra = wartosc3;
+}
+
+bool Menu::nowa_gierka()
+{
+	return nowa_gra;
+}
+
+sf::Text Menu::k_imie()
+{
+	return imie;
+}
+
+int Menu::k_punkty()
+{
+	return punkty;
+}
+
+void Menu::poziom(bool wartosc2)
+{
+	wybor_poziomu = wartosc2;
+}
+
+int Menu::F1()
+{
+	return f1_flaga;
+}
+
+int Menu::Escc()
+{
+	return esc_flaga;
+}
 
 void Menu::start_programu()
 {
@@ -213,7 +298,7 @@ void Menu::nick(sf::Text nick)
 		imie.setCharacterSize(40);
 		imie.setFillColor(sf::Color::White);
 		imie.setPosition(400, 380);
-	}	
+	}
 }
 
 void Menu::koniec(bool wartosc)
@@ -224,12 +309,19 @@ void Menu::koniec(bool wartosc)
 void Menu::get_zycia(int zycia)
 {
 	serca = zycia;
-	std::cout << "\nSerca: " << serca;
+	std::cout << "\nSerca: " << serca << std::endl;
 }
 
 void Menu::get_punkty(int points)
 {
-	punkty = points;
+	if (wybor_poziomu)
+	{
+		punkty = points; // punkty dla latwego poziomu
+	}
+	else
+	{
+		punkty = 2 * points; // punkty dla trudnego poziomu
+	}
 }
 
 int Menu::strzelanie()
@@ -308,6 +400,24 @@ Menu::Menu(float width, float height, const sf::Texture& tekstura)
 	menu[10].setString("Wprowadz swoj nick:");
 	menu[10].setPosition(sf::Vector2f(330, 280));
 
+	menu[11].setFont(font);
+	menu[11].setCharacterSize(20);
+	menu[11].setFillColor(sf::Color::White);
+	menu[11].setString("Poziom trudnosci:\n1 - latwy\n2 - trudny");
+	menu[11].setPosition(sf::Vector2f(820, 220));
+
+	menu[12].setFont(font);
+	menu[12].setCharacterSize(30);
+	menu[12].setFillColor(sf::Color::White);
+	menu[12].setString("latwy");
+	menu[12].setPosition(sf::Vector2f(820, 320));
+
+	menu[13].setFont(font);
+	menu[13].setCharacterSize(30);
+	menu[13].setFillColor(sf::Color::White);
+	menu[13].setString("trudny");
+	menu[13].setPosition(sf::Vector2f(820, 320));
+
 	for (int j = 0; j < 3; j++)
 	{
 		serce[j].setTexture(tekstura);
@@ -318,7 +428,7 @@ Menu::Menu(float width, float height, const sf::Texture& tekstura)
 void Menu::draw(sf::RenderWindow& window)
 {
 	if (start)
-	{		
+	{
 		window.draw(menu[9]);
 		window.draw(menu[10]);
 		window.draw(imie);
@@ -338,6 +448,10 @@ void Menu::draw(sf::RenderWindow& window)
 				menu[6].setPosition(450, 360);
 				window.draw(menu[6]);
 				window.draw(menu[8]);
+			}
+			else
+			{
+				menu[6].setPosition(900, 25);
 			}
 		}
 		else if (serca == 2)
@@ -384,15 +498,27 @@ void Menu::draw(sf::RenderWindow& window)
 		{
 			window.draw(menu[i]);
 		}
+		window.draw(menu[11]);
+		if (wybor_poziomu)
+		{
+			window.draw(menu[12]);
+		}
+		else
+		{
+			window.draw(menu[13]);
+		}
 
 		if (opcje_enter_flaga)
 		{
 			czy_strzelac = false;
 			if (wybrana_opcja == 0)
-			{				
+			{
 				if (opcje_enter_flaga == 1) // graj
 				{
 					czy_strzelac = true;
+					esc_flaga = false;
+					nowa_gra = !nowa_gra;
+					opcje_enter_flaga = 0;
 				}
 			}
 			else if (wybrana_opcja == 1) // tablica wynikow
@@ -471,7 +597,7 @@ void Menu::wybor_opcji()
 	opcje_enter_flaga++; //zliczanie liczby klikniec enter
 }
 
-bool obsluz_kolizje(std::vector <Przeciwnik>& kosmici, std::vector <Pocisk>& pociski,int *kosmita_do_usuniecia, int *pocisk_do_usuniecia) // funkcja zwraca wartosc, czy kolizja zostala wykryta
+bool obsluz_kolizje(std::vector <Przeciwnik>& kosmici, std::vector <Pocisk>& pociski, int* kosmita_do_usuniecia, int* pocisk_do_usuniecia) // funkcja zwraca wartosc, czy kolizja zostala wykryta
 {
 	for (int pocisk_i = 0; pocisk_i < pociski.size(); pocisk_i++)
 	{
@@ -488,11 +614,11 @@ bool obsluz_kolizje(std::vector <Przeciwnik>& kosmici, std::vector <Pocisk>& poc
 	return false;
 }
 
-bool obsluz_kolizje_z_koncem_mapy(std::vector <Przeciwnik>& kosmici, std::vector <Pocisk>& pociski, int* kosmita_do_usuniecia_km)
+bool obsluz_kolizje_z_koncem_mapy(std::vector <Przeciwnik>& kosmici, int* kosmita_do_usuniecia_km)
 {
 	for (int kosmita_i = 0; kosmita_i < kosmici.size(); kosmita_i++)
 	{
-		if (pociski[0].kolizja_koniec_mapy(kosmici[kosmita_i]))
+		if (kolizja_koniec_mapy(kosmici[kosmita_i]))
 		{
 			*kosmita_do_usuniecia_km = kosmita_i;
 			return true;
@@ -500,6 +626,12 @@ bool obsluz_kolizje_z_koncem_mapy(std::vector <Przeciwnik>& kosmici, std::vector
 	}
 	return false;
 }
+
+struct tablica_wynikow
+{
+	sf::Text nickame;
+	int punktacja = 0;
+} wyniki;
 
 int main()
 {
@@ -524,20 +656,18 @@ int main()
 	Gracz gracz(window.getSize().x, window.getSize().y, tekstura_statku);
 	std::vector < Pocisk > pociski;
 	std::vector < Przeciwnik > kosmici; // klasa/'tablica' vector 'przygotowuje' klase przeciwnik do przechowywania obiektow
+	tablica_wynikow wyniki;
+	tablica_wynikow wyniki_odczyt;
 
-	const int liczba_przeciwnikow = 5;
+	const int liczba_przeciwnikow = 10;
 	int punkty = 0;
-
-	for (int i = 0; i < liczba_przeciwnikow; i++)
-	{
-		float wsp_x = (window.getSize().x / 5) * i + 40;
-		float wsp_y = 0;
-
-		kosmici.push_back(Przeciwnik(wsp_x, wsp_y, tekstura_kosmity1));
-	}
+	bool raz = true;
+	int zycia = 3;
 
 	std::string znak;
 	sf::Text nick;
+
+	int poziom = 1;
 
 	while (window.isOpen())
 	{
@@ -545,17 +675,15 @@ int main()
 
 		while (window.pollEvent(event))
 		{
-			if (event.type == sf::Event::TextEntered)
+			switch (event.type)
 			{
+			case sf::Event::TextEntered:
 				if (event.text.unicode < 128)
 				{
 					znak += static_cast<char>(event.text.unicode);
 					nick.setString(znak);
 					menu.nick(nick);
 				}
-			}
-			switch (event.type)
-			{
 			case sf::Event::KeyReleased:
 				switch (event.key.code)
 				{
@@ -578,6 +706,22 @@ int main()
 				case sf::Keyboard::Space: //strzal
 					pociski.push_back(Pocisk(gracz.get_gracz().getPosition().x + 25, 500));
 					break;
+				case sf::Keyboard::Num1: // 1 na klawiaturze (nie na numpadzie)
+					menu.poziom(true);
+					for (Przeciwnik& przeciwnik : kosmici)
+					{
+						przeciwnik.poziom_trudnosci(true);
+					}
+					poziom = 1;
+					break;
+				case sf::Keyboard::Num2:
+					menu.poziom(false);
+					for (Przeciwnik& przeciwnik : kosmici)
+					{
+						przeciwnik.poziom_trudnosci(false);
+					}
+					break;
+					poziom = 2;
 				}
 				break;
 			case sf::Event::Closed:
@@ -604,6 +748,23 @@ int main()
 
 		if (menu.strzelanie())
 		{
+			if (menu.nowa_gierka())
+			{
+				menu.koniec(false);
+				kosmici.clear();
+				punkty = 0;
+				menu.get_punkty(punkty);
+				zycia = 3;
+				menu.get_zycia(zycia);
+				for (int i = 0; i < liczba_przeciwnikow; i++)
+				{
+					float wsp_x = (window.getSize().x / liczba_przeciwnikow) * i + 40;
+					float wsp_y = 50;
+
+					kosmici.push_back(Przeciwnik(wsp_x, wsp_y, tekstura_kosmity1));
+				}
+				menu.nie_rysuj(false);
+			}
 			gracz.draw(window);
 			for (Pocisk& pocisk : pociski)
 			{
@@ -611,7 +772,13 @@ int main()
 			}
 			for (Przeciwnik& przeciwnik : kosmici)
 			{
-				przeciwnik.draw(window);
+				if (!menu.F1()) // rysuj tylko jest pomoc nie jest wlaczona
+				{
+					if (!menu.Escc())
+					{
+						przeciwnik.draw(window);
+					}
+				}
 			}
 
 			// wykrywanie i obsluga kolizji
@@ -630,17 +797,45 @@ int main()
 
 			int kosmita_do_usuniecia_km;
 			int pocisk_do_usuniecia_km;
-			int zycia = 3;
-			while (obsluz_kolizje_z_koncem_mapy(kosmici, pociski, &kosmita_do_usuniecia_km))
+
+			while (obsluz_kolizje_z_koncem_mapy(kosmici, &kosmita_do_usuniecia_km))
 			{
 				kosmici.erase(kosmici.begin() + kosmita_do_usuniecia_km);
 				zycia--;
 				menu.get_zycia(zycia);
+				std::cout << "Liczba kosmitow" << " :" << kosmici.size() << std::endl;
+				std::cout << "Liczba pociskow" << " :" << pociski.size() << std::endl;
 			}
 
-			if (kosmici.size() == 0)
+			if (kosmici.size() == 0) // do wyswietlania wygrales / przegrales
 			{
 				menu.koniec(true);
+
+				if (raz)
+				{
+					wyniki.nickame = menu.k_imie();
+					wyniki.punktacja = menu.k_punkty();
+					//std::cout << "Punkty: " << wyniki.punktacja;
+					raz = false;
+
+					/* 
+					* FILE* fp;
+					fp = fopen("dane.dat", "a+b"); // plik do dopisywania i odczytu
+
+					if (fp == NULL)
+					{
+						printf("Blad otwarcia pliku");
+						return 1;
+					}
+					fwrite(&wyniki, sizeof(tablica_wynikow), 1, fp);
+					fseek(fp, 0, SEEK_SET);
+					fread(&wyniki_odczyt, 10 * sizeof(tablica_wynikow), 1, fp);
+					std::cout << wyniki_odczyt.punktacja;
+					fclose(fp);
+					*/
+					
+
+				}
 			}
 		}
 
@@ -650,4 +845,3 @@ int main()
 
 	return 0;
 }
-
