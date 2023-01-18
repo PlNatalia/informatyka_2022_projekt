@@ -541,7 +541,6 @@ void Menu::draw(sf::RenderWindow& window)
 				if (opcje_enter_flaga == 1)
 				{
 					pokaz_wyniki = true;
-					esc_flaga = false;
 					opcje_enter_flaga = 0;														
 				}
 			}
@@ -690,6 +689,7 @@ int main()
 	std::string znak;
 	sf::Text nick;
 	std::string imie;
+	int licznik = 0;
 
 	while (window.isOpen())
 	{
@@ -718,6 +718,7 @@ int main()
 				case sf::Keyboard::Enter:
 					menu.wybor_opcji();
 					menu.start_programu();
+					licznik = 0;
 					break;
 				case sf::Keyboard::Up:
 					menu.Gora();
@@ -887,15 +888,19 @@ int main()
 			plik.close();
 
 			std::sort(wyniki, wyniki + 20); // sortowanie wg punktow
-
-			for (int x = 0; x < 10; x++)
-			{
-				std::cout << x + 1;
-				std::cout << ". Nick: " << wyniki[x].nickame << std::endl;
-				std::cout << "   Wynik: " << wyniki[x].punktacja << std::endl;
-			}			
 			
 			zapisz = false;
+		}
+
+		if (menu.czy_pokazac_wyniki() && licznik == 0)
+		{
+			for (int x = 0; x < 10; x++)
+				{
+					std::cout << x + 1;
+					std::cout << ". Nick: " << wyniki[x].nickame << std::endl;
+					std::cout << "   Wynik: " << wyniki[x].punktacja << std::endl;
+				}
+				licznik++;		
 		}
 
 		menu.draw(window);
