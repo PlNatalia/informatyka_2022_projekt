@@ -237,11 +237,16 @@ public:
 	int F1();
 	void poziom(bool wartosc2);
 	int Escc();
-	int k_punkty();
 	sf::Text k_imie();
 	bool nowa_gierka();
 	void nie_rysuj(bool wartosc3);
+	int zwroc_punkty();
 };
+
+int Menu::zwroc_punkty()
+{
+	return punkty;
+}
 
 void Menu::nie_rysuj(bool wartosc3)
 {
@@ -256,11 +261,6 @@ bool Menu::nowa_gierka()
 sf::Text Menu::k_imie()
 {
 	return imie;
-}
-
-int Menu::k_punkty()
-{
-	return punkty;
 }
 
 void Menu::poziom(bool wartosc2)
@@ -517,7 +517,7 @@ void Menu::draw(sf::RenderWindow& window)
 				{
 					czy_strzelac = true;
 					esc_flaga = false;
-					nowa_gra = !nowa_gra;
+					nowa_gra = !nowa_gra; // do restartu
 					opcje_enter_flaga = 0;
 				}
 			}
@@ -525,7 +525,11 @@ void Menu::draw(sf::RenderWindow& window)
 			{
 				if (opcje_enter_flaga == 1)
 				{
-					//
+					imie.setPosition(100, 50);
+					imie.setCharacterSize(30);
+					window.draw(imie);
+					menu[6].setPosition(300, 60); // wynik
+					window.draw(menu[6]);									
 				}
 			}
 			else if (wybrana_opcja == 2) // wyjscie
@@ -585,6 +589,7 @@ void Menu::Dol()
 void Menu::Esc()
 {
 	esc_flaga = !esc_flaga;
+	opcje_enter_flaga = 0;
 }
 
 void Menu::Pomoc()
@@ -661,13 +666,13 @@ int main()
 
 	const int liczba_przeciwnikow = 10;
 	int punkty = 0;
+	int highscore = 0;
 	bool raz = true;
 	int zycia = 3;
-
+	bool poziom = true;
 	std::string znak;
 	sf::Text nick;
 
-	int poziom = 1;
 
 	while (window.isOpen())
 	{
@@ -684,6 +689,7 @@ int main()
 					nick.setString(znak);
 					menu.nick(nick);
 				}
+				break;
 			case sf::Event::KeyReleased:
 				switch (event.key.code)
 				{
@@ -706,28 +712,24 @@ int main()
 				case sf::Keyboard::Space: //strzal
 					pociski.push_back(Pocisk(gracz.get_gracz().getPosition().x + 25, 500));
 					break;
-				case sf::Keyboard::Num1: // 1 na klawiaturze (nie na numpadzie)
-					menu.poziom(true);
-					for (Przeciwnik& przeciwnik : kosmici)
-					{
-						przeciwnik.poziom_trudnosci(true);
-					}
-					poziom = 1;
+				case sf::Keyboard::Num1: // 1 na klawiaturze (nie na numpadzie)					
+					poziom = true;
 					break;
-				case sf::Keyboard::Num2:
-					menu.poziom(false);
-					for (Przeciwnik& przeciwnik : kosmici)
-					{
-						przeciwnik.poziom_trudnosci(false);
-					}
+				case sf::Keyboard::Num2:					
+					poziom = false;
 					break;
-					poziom = 2;
 				}
 				break;
 			case sf::Event::Closed:
 				window.close();
 				break;
 			}
+		}
+	
+		menu.poziom(poziom); // do wyswietlania menu
+		for (Przeciwnik& przeciwnik : kosmici)
+		{
+			przeciwnik.poziom_trudnosci(poziom); // do ruchu kosmitow
 		}
 
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A))
@@ -750,6 +752,7 @@ int main()
 		{
 			if (menu.nowa_gierka())
 			{
+				raz = true;
 				menu.koniec(false);
 				kosmici.clear();
 				punkty = 0;
@@ -772,12 +775,9 @@ int main()
 			}
 			for (Przeciwnik& przeciwnik : kosmici)
 			{
-				if (!menu.F1()) // rysuj tylko jest pomoc nie jest wlaczona
+				if (!menu.F1() && !menu.Escc()) // rysuj tylko jest pomoc nie jest wlaczona
 				{
-					if (!menu.Escc())
-					{
-						przeciwnik.draw(window);
-					}
+					przeciwnik.draw(window);
 				}
 			}
 
@@ -790,6 +790,7 @@ int main()
 				kosmici.erase(kosmici.begin() + kosmita_do_usuniecia); // erase to funkcja usuwajaca elementy z wektora, begin to funkcja zwracajaca iterator (wskaznik) na poczatek wektora, dodajemy np. kosmite do usuniecia, aby przesunac iterator(wskaznik) na odpowiednie miejsce
 				pociski.erase(pociski.begin() + pocisk_do_usuniecia);
 				punkty++;
+				
 				menu.get_punkty(punkty);
 				std::cout << "Liczba kosmitow" << " :" << kosmici.size() << std::endl;
 				std::cout << "Liczba pociskow" << " :" << pociski.size() << std::endl;
@@ -814,12 +815,15 @@ int main()
 				if (raz)
 				{
 					wyniki.nickame = menu.k_imie();
-					wyniki.punktacja = menu.k_punkty();
-					//std::cout << "Punkty: " << wyniki.punktacja;
-					raz = false;
-
-					/* 
-					* FILE* fp;
+					if (menu.zwroc_punkty() > highscore)
+					{
+						highscore = menu.zwroc_punkty();
+					}
+					wyniki.punktacja = highscore;
+					std::cout << "Najlepszy wynik: " << wyniki.punktacja << std::endl;
+					
+					/*
+					FILE* fp;
 					fp = fopen("dane.dat", "a+b"); // plik do dopisywania i odczytu
 
 					if (fp == NULL)
@@ -833,8 +837,7 @@ int main()
 					std::cout << wyniki_odczyt.punktacja;
 					fclose(fp);
 					*/
-					
-
+					raz = false;
 				}
 			}
 		}
