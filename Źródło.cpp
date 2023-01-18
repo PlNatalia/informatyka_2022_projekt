@@ -17,6 +17,8 @@ Utracenie wszystkich skutkowac bedzie zakonczeniem gry. Uzyskane wyniki beda wid
 #include <cmath>
 #include <sstream>
 #include <random>
+#include <fstream> // zapis do pliku
+#include <algorithm> // do sortowania
 
 class Przeciwnik
 {
@@ -219,6 +221,7 @@ private:
 	bool wybor_poziomu = true;
 	bool poczatek_gry = false;
 	bool nowa_gra = false;
+	bool pokaz_wyniki = false;
 
 public:
 	Menu(float width, float height, const sf::Texture& tekstura);
@@ -241,7 +244,13 @@ public:
 	bool nowa_gierka();
 	void nie_rysuj(bool wartosc3);
 	int zwroc_punkty();
+	bool czy_pokazac_wyniki();
 };
+
+bool Menu::czy_pokazac_wyniki()
+{
+	return pokaz_wyniki;
+}
 
 int Menu::zwroc_punkty()
 {
@@ -434,6 +443,11 @@ void Menu::draw(sf::RenderWindow& window)
 		window.draw(imie);
 	}
 
+	if (pokaz_wyniki)
+	{
+
+	}
+
 	if (czy_strzelac)
 	{
 		menu[6].setString("Wynik: " + std::to_string(punkty)); // zamiana zmiennej na tekst, w tym miejscu zeby sie co kratke aktualizowalo
@@ -511,6 +525,7 @@ void Menu::draw(sf::RenderWindow& window)
 		if (opcje_enter_flaga)
 		{
 			czy_strzelac = false;
+			pokaz_wyniki = false;
 			if (wybrana_opcja == 0)
 			{
 				if (opcje_enter_flaga == 1) // graj
@@ -525,11 +540,9 @@ void Menu::draw(sf::RenderWindow& window)
 			{
 				if (opcje_enter_flaga == 1)
 				{
-					imie.setPosition(100, 50);
-					imie.setCharacterSize(30);
-					window.draw(imie);
-					menu[6].setPosition(300, 60); // wynik
-					window.draw(menu[6]);									
+					pokaz_wyniki = true;
+					esc_flaga = false;
+					opcje_enter_flaga = 0;														
 				}
 			}
 			else if (wybrana_opcja == 2) // wyjscie
@@ -634,9 +647,13 @@ bool obsluz_kolizje_z_koncem_mapy(std::vector <Przeciwnik>& kosmici, int* kosmit
 
 struct tablica_wynikow
 {
-	sf::Text nickame;
+	std::string nickame;
 	int punktacja = 0;
-} wyniki;
+	bool operator < (const tablica_wynikow& x)const
+	{                
+		return punktacja > x.punktacja;
+	}
+} wyniki[10];
 
 int main()
 {
@@ -661,8 +678,7 @@ int main()
 	Gracz gracz(window.getSize().x, window.getSize().y, tekstura_statku);
 	std::vector < Pocisk > pociski;
 	std::vector < Przeciwnik > kosmici; // klasa/'tablica' vector 'przygotowuje' klase przeciwnik do przechowywania obiektow
-	tablica_wynikow wyniki;
-	tablica_wynikow wyniki_odczyt;
+	tablica_wynikow wyniki[20];
 
 	const int liczba_przeciwnikow = 10;
 	int punkty = 0;
@@ -670,9 +686,10 @@ int main()
 	bool raz = true;
 	int zycia = 3;
 	bool poziom = true;
+	bool zapisz = false;
 	std::string znak;
 	sf::Text nick;
-
+	std::string imie;
 
 	while (window.isOpen())
 	{
@@ -686,6 +703,8 @@ int main()
 				if (event.text.unicode < 128)
 				{
 					znak += static_cast<char>(event.text.unicode);
+					imie += znak;
+					
 					nick.setString(znak);
 					menu.nick(nick);
 				}
@@ -717,6 +736,9 @@ int main()
 					break;
 				case sf::Keyboard::Num2:					
 					poziom = false;
+					break;
+				case sf::Keyboard::P:
+					zapisz = true;			
 					break;
 				}
 				break;
@@ -814,32 +836,66 @@ int main()
 
 				if (raz)
 				{
-					wyniki.nickame = menu.k_imie();
 					if (menu.zwroc_punkty() > highscore)
 					{
 						highscore = menu.zwroc_punkty();
-					}
-					wyniki.punktacja = highscore;
-					std::cout << "Najlepszy wynik: " << wyniki.punktacja << std::endl;
-					
-					/*
-					FILE* fp;
-					fp = fopen("dane.dat", "a+b"); // plik do dopisywania i odczytu
+					}					
 
-					if (fp == NULL)
-					{
-						printf("Blad otwarcia pliku");
-						return 1;
-					}
-					fwrite(&wyniki, sizeof(tablica_wynikow), 1, fp);
-					fseek(fp, 0, SEEK_SET);
-					fread(&wyniki_odczyt, 10 * sizeof(tablica_wynikow), 1, fp);
-					std::cout << wyniki_odczyt.punktacja;
-					fclose(fp);
-					*/
 					raz = false;
 				}
 			}
+		} // gdy nie jest wlaczona gra
+
+		if (zapisz)
+		{
+			std::cout << "Zapisano wynik!" << std::endl;
+			std::fstream plik;
+			plik.open("dane.txt", std::ios::app); // std::ios::app -> ustawia wewnêtrzny wskaŸnik zapisu pliku na jego koniec, mozna tylko dopisywac
+			plik << highscore << std::endl;
+			plik << menu.k_imie().getString().toAnsiString() << std::endl;
+			plik.close();
+				
+			// sortowanie i przypisywanie do tablicy struktur
+			plik.open("dane.txt", std::ios::in);
+			if (!plik.good())
+			{
+				std::cout << "Plik nie istnieje! " << std::endl;
+				return 0;
+			}
+
+			std::string linia;
+			int nr_linii = 1;
+			int nr_iteracji = 0;
+			while (getline(plik, linia))
+			{
+				switch (nr_linii)
+				{
+				case 1:
+					wyniki[nr_iteracji].punktacja = atoi(linia.c_str());
+					break;
+				case 2:
+					wyniki[nr_iteracji].nickame = linia;
+					break;
+				}
+				if (nr_linii == 2) 
+				{ 
+					nr_linii = 0; 
+					nr_iteracji++; 
+				}
+				nr_linii++;
+			}
+			plik.close();
+
+			std::sort(wyniki, wyniki + 20); // sortowanie wg punktow
+
+			for (int x = 0; x < 10; x++)
+			{
+				std::cout << x + 1;
+				std::cout << ". Nick: " << wyniki[x].nickame << std::endl;
+				std::cout << "   Wynik: " << wyniki[x].punktacja << std::endl;
+			}			
+			
+			zapisz = false;
 		}
 
 		menu.draw(window);
